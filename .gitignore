@@ -1,0 +1,19 @@
+# OS / editor junk
+Thumbs.db
+.DS_Store
+*.swp
+.vscode/
+
+# local tooling artifacts (server/check scripts leave these behind)
+*.log
+ip.txt
+srv.txt
+check.txt
+files.txt
+baseline.txt
+verify.txt
+smoke-out.txt
+github-log.txt
+gitinfo.txt
+diag.txt
+github-*.ps1

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1030">
+<title>SKYBOUND — Infinity Flight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-block hud-left">
+        <div class="hud-label">BEST</div>
+        <div id="hud-best" class="hud-best">000000</div>
+      </div>
+      <div class="hud-block hud-center">
+        <div id="hud-score" class="hud-score">000000</div>
+        <div id="hud-combo" class="hud-combo hidden">x2</div>
+      </div>
+      <div class="hud-block hud-right">
+        <div class="hud-feathers">
+          <svg class="feather-ico" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M20.5 3.5c-4.6-.9-9.4.5-12.7 3.8C5 10.1 3.7 13.9 4.2 17.6l-1.7 1.7a1 1 0 1 0 1.4 1.4l1.7-1.7c3.7.5 7.5-.8 10.3-3.6 3.3-3.3 4.7-8.1 3.8-12.7z"/></svg>
+          <span id="hud-feathers">000</span>
+        </div>
+        <button id="btn-pause" class="icon-btn" aria-label="Pause">
+          <svg viewBox="0 0 24 24" width="18" height="18"><rect x="6" y="4" width="4" height="16" rx="1.4" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1.4" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="hud-powerups"></div>
+    <div id="banner" class="hidden">
+      <div id="banner-title"></div>
+      <div id="banner-sub"></div>
+    </div>
+  </div>
+
+  <div id="tap-hint" class="hidden"><span>TAP</span><i></i><span>SPACE — FLY</span></div>
+
+  <!-- ============ MAIN MENU ============ -->
+  <div id="screen-menu" class="screen active">
+    <div class="menu-inner">
+      <div class="title-wrap">
+        <h1 class="game-title">SKYBOUND</h1>
+        <div class="game-subtitle">INFINITY&nbsp;FLIGHT</div>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-play" class="btn btn-primary">PLAY</button>
+        <button id="btn-how" class="btn btn-ghost">HOW TO PLAY</button>
+        <button id="btn-settings" class="btn btn-ghost">SETTINGS</button>
+      </div>
+      <div class="menu-best">
+        <span class="menu-best-label">BEST SCORE</span>
+        <span id="menu-best" class="menu-best-value">000000</span>
+        <span class="menu-feathers"><svg class="feather-ico" viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M20.5 3.5c-4.6-.9-9.4.5-12.7 3.8C5 10.1 3.7 13.9 4.2 17.6l-1.7 1.7a1 1 0 1 0 1.4 1.4l1.7-1.7c3.7.5 7.5-.8 10.3-3.6 3.3-3.3 4.7-8.1 3.8-12.7z"/></svg><span id="menu-feathers">0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <div id="screen-how" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">HOW TO PLAY</h2>
+      <div class="how-grid">
+        <div class="how-row"><span class="how-key">TAP / SPACE</span><span class="how-desc">Flap your wings to rise</span></div>
+        <div class="how-row"><span class="how-key">P</span><span class="how-desc">Pause the flight</span></div>
+        <div class="how-row"><span class="how-key">ENTER</span><span class="how-desc">Start / retry instantly</span></div>
+      </div>
+      <div class="how-tips">
+        <p>Thread the ancient ruins, crystal gates and sky temples. Every pass builds your <b>COMBO</b> — chain gates for up to a <b>x5</b> score multiplier.</p>
+        <p>Collect glowing <b class="c-cyan">FEATHERS</b>. Grab <b class="c-gold">POWER-UPS</b>: shield, time warp, magnet and score boost.</p>
+        <p>The sky accelerates every <b>1000</b> points. Survive the dusk. Chase the aurora.</p>
+      </div>
+      <button id="btn-how-back" class="btn btn-primary">GOT IT</button>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div id="screen-settings" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">SETTINGS</h2>
+      <div class="toggle-row"><span class="toggle-label">SOUND FX</span><button id="tg-sound" class="switch on" aria-label="Toggle sound"><i></i></button></div>
+      <div class="toggle-row"><span class="toggle-label">MUSIC</span><button id="tg-music" class="switch on" aria-label="Toggle music"><i></i></button></div>
+      <div class="toggle-row"><span class="toggle-label">SCREEN SHAKE</span><button id="tg-shake" class="switch on" aria-label="Toggle shake"><i></i></button></div>
+      <div class="toggle-row"><span class="toggle-label">HIGH PARTICLES</span><button id="tg-fx" class="switch on" aria-label="Toggle particles"><i></i></button></div>
+      <button id="btn-set-back" class="btn btn-primary">BACK</button>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div id="screen-pause" class="screen">
+    <div class="panel panel-dim">
+      <h2 class="panel-title">PAUSED</h2>
+      <div class="menu-buttons">
+        <button id="btn-resume" class="btn btn-primary">RESUME</button>
+        <button id="btn-restart" class="btn btn-ghost">RESTART</button>
+        <button id="btn-menu3" class="btn btn-ghost">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="screen-over" class="screen">
+    <div class="panel panel-over">
+      <div id="go-record" class="new-record hidden">NEW RECORD!</div>
+      <h2 class="panel-title go-title">FLIGHT OVER</h2>
+      <div class="stats-grid">
+        <div class="stat"><span class="stat-label">SCORE</span><span id="go-score" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">BEST</span><span id="go-best" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">DISTANCE</span><span id="go-distance" class="stat-value">0m</span></div>
+        <div class="stat"><span class="stat-label">FEATHERS</span><span id="go-feathers" class="stat-value">0</span></div>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-retry" class="btn btn-primary">RETRY</button>
+        <button id="btn-menu2" class="btn btn-ghost">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script src="js/obstacles.js"></script>
+<script src="js/pickups.js"></script>
+<script src="js/events.js"></script>
+<script src="js/score.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
