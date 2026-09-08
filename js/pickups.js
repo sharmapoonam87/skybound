@@ -172,24 +172,38 @@ class PickupManager {
 
   /* Bombs always spawn OUTSIDE the upcoming gate corridor so the
      player keeps one clean path — danger you can read, never a
-     wall of defeats. */
-  spawnBomb() {
+     wall of defeats.  At every 1000-point milestone a whole wave
+     (2 staggered bombs) is guaranteed. */
+  spawnBomb(milestone) {
     const g = this.game, S = g.S;
-    let y = null;
-    for (const ob of g.obstacles.obs) {
-      if (ob.x > g.w * 0.6 && ob.x < g.w * 2.4) {
-        const gapTop = ob.gapY - ob.gapH / 2;
-        const gapBot = ob.gapY + ob.gapH / 2;
-        const side = Math.random() < 0.5 ? -1 : 1;
-        const off = rand(46, 96) * S;
-        y = clamp(side < 0 ? gapTop - off : gapBot + off, 60 * S, g.h - 60 * S);
-        break;
+    const yFor = () => {
+      let y = null;
+      for (const ob of g.obstacles.obs) {
+        if (ob.x > g.w * 0.6 && ob.x < g.w * 2.4) {
+          const gapTop = ob.gapY - ob.gapH / 2;
+          const gapBot = ob.gapY + ob.gapH / 2;
+          const side = Math.random() < 0.5 ? -1 : 1;
+          const off = rand(46, 96) * S;
+          y = clamp(side < 0 ? gapTop - off : gapBot + off, 60 * S, g.h - 60 * S);
+          break;
+        }
       }
+      if (y === null) {
+        y = Math.random() < 0.5 ? rand(60 * S, g.h * 0.3) : rand(g.h * 0.7, g.h - 60 * S);
+      }
+      return y;
+    };
+    if (milestone) {
+      // a readable, dodgeable pair joins the sky at each 1000-point tier
+      for (let i = 0; i < 2; i++) {
+        this.bombs.push({
+          x: g.w + (200 + i * 150) * S,
+          y: yFor(), ph: rand(TAU), t: rand(20), milestone: true
+        });
+      }
+    } else {
+      this.bombs.push({ x: g.w + 160 * S, y: yFor(), ph: rand(TAU), t: rand(20) });
     }
-    if (y === null) {
-      y = Math.random() < 0.5 ? rand(60 * S, g.h * 0.3) : rand(g.h * 0.7, g.h - 60 * S);
-    }
-    this.bombs.push({ x: g.w + 160 * S, y, ph: rand(TAU), t: rand(20) });
   }
 
   draw(ctx) {

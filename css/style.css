@@ -193,6 +193,32 @@ html, body {
 .about-text { font-size: .8rem; line-height: 1.5; color: var(--text-dim); margin: 4px 0; }
 .about-text b { color: var(--text); }
 .about-text .c-gold { color: var(--gold); }
+.about-text .c-bomb { color: #ff5b45; }
+
+/* ================= All players leaderboard ================= */
+.lb-box {
+  max-width: min(92vw, 460px);
+  border-radius: 16px;
+  padding: 12px 18px;
+  background: rgba(8, 16, 38, .45);
+  border: 1px solid rgba(255, 91, 69, .35);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.lb-list { display: flex; flex-direction: column; gap: 4px; max-height: 190px; overflow-y: auto; }
+.lb-row {
+  display: grid; grid-template-columns: 26px 1fr auto auto; gap: 8px;
+  align-items: center; padding: 4px 8px; border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.lb-row:first-child { background: rgba(255, 200, 87, .10); border-color: rgba(255, 200, 87, .4); }
+.lb-pos { font-family: var(--font-display); color: var(--gold); font-size: .8rem; width: 20px; text-align: center; }
+.lb-name { color: #fff; font-weight: 600; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-feathers { color: var(--cyan); font-size: .68rem; white-space: nowrap; }
+.lb-feathers::before { content: "🪶 "; }
+.lb-score { color: var(--gold); font-family: var(--font-display); font-size: .84rem; letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.lb-empty { color: var(--text-dim); font-size: .72rem; text-align: center; padding: 10px 6px; }
+.lb-note { color: var(--text-dim); font-size: .6rem; line-height: 1.45; margin-top: 2px; text-align: left; }
 
 /* ================= Power-up legend (How to play) ================= */
 .panel-scroll { max-height: 86vh; overflow: hidden; }
