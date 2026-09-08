@@ -154,7 +154,6 @@ html, body {
 .player-id-wrap { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .player-name { font-family: var(--font-display); font-size: 1rem; letter-spacing: .06em; color: #fff; }
 .player-tag { font-size: .6rem; font-weight: 700; letter-spacing: .28em; color: var(--text-dim); }
-.player-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; margin-left: auto; }
 
 .btn-sm { min-width: 120px; padding: 7px 14px; font-size: .66rem; letter-spacing: .1em; }
 

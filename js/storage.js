@@ -188,17 +188,6 @@ const Save = {
     if (changed) this.save();
   },
 
-  /* Secure export card — hashed pid + stats only, no PII. */
-  exportCard() {
-    const p = this.profile();
-    return {
-      schema: 'skybound-player-card', version: 1,
-      pid: p.pid, provider: p.provider, name: p.provider === 'google' ? p.name : null,
-      best: p.best, totalFeathers: p.totalFeathers, games: p.games,
-      updatedAt: new Date().toISOString()
-    };
-  },
-
   /* ---------- hashing (pseudonymization) ---------- */
   async hashId(raw) {
     const salted = raw + '::' + _pepper;

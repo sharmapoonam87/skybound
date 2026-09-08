@@ -46,26 +46,6 @@ window.addEventListener('DOMContentLoaded', () => {
   on('tg-fx', () => { Save.data.fx = !Save.data.fx; Save.save(); syncToggles(); });
 
   /* ---------- identity: local guest profile + player registry ---------- */
-  const refreshIdentityUI = () => {
-    game.ui.updateMenuStats();
-  };
-
-  on('btn-export', () => {
-    const card = Save.exportCard();
-    try {
-      const blob = new Blob([JSON.stringify(card, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'skybound-card-' + card.pid.slice(0, 10) + '.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      prompt('Your SKYBOUND player card (paste me into the merge tool):', JSON.stringify(card, null, 2));
-    }
-  });
 
   /* load published all-players totals (best effort — 404-safe) */
   const fetchRegistry = () => {
@@ -74,9 +54,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!r.ok) throw new Error('no registry');
         return r.json();
       })
-      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); refreshIdentityUI(); })
+      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); game.ui.updateMenuStats(); })
       .catch(() => { /* no registry published — guest mode works fine */ })
-      .finally(() => { refreshIdentityUI(); game.ui.updateMenuStats(); });
+      .finally(() => { game.ui.updateMenuStats(); });
   };
   fetchRegistry();
 
