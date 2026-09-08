@@ -45,44 +45,10 @@ window.addEventListener('DOMContentLoaded', () => {
   on('tg-shake', () => { Save.data.shake = !Save.data.shake; Save.save(); syncToggles(); });
   on('tg-fx', () => { Save.data.fx = !Save.data.fx; Save.save(); syncToggles(); });
 
-  /* ---------- identity: Google sign-in + player registry ---------- */
-  Auth.boot();
-
-  const updateAuthUI = () => {
-    const p = Save.profile();
-    const btn = $('btn-google');
-    if (p.provider === 'google') {
-      btn.textContent = 'SIGN OUT';
-      btn.className = 'btn btn-ghost btn-g';
-    } else {
-      btn.textContent = 'Sign in with Google';
-      btn.className = 'btn btn-g';
-    }
+  /* ---------- identity: local guest profile + player registry ---------- */
+  const refreshIdentityUI = () => {
     game.ui.updateMenuStats();
   };
-
-  on('btn-google', async () => {
-    const p = Save.profile();
-    if (p.provider === 'google') {
-      Save.signOut();
-      updateAuthUI();
-      game.ui.updateMenuStats();
-      return;
-    }
-    if (!Auth.configured()) {
-      game.ui.banner('GOOGLE SIGN-IN', 'NOT CONFIGURED — ADD YOUR CLIENT ID');
-      return;
-    }
-    try {
-      const cred = await Auth.signIn();
-      const player = await Auth.playerFor(cred);
-      Save.setPlayer(player);
-      updateAuthUI();
-      game.ui.banner('WELCOME BACK', cred.name || 'SKY PILOT');
-    } catch (e) {
-      game.ui.banner('SIGN-IN FAILED', e.message || 'Try again');
-    }
-  });
 
   on('btn-export', () => {
     const card = Save.exportCard();
@@ -108,9 +74,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!r.ok) throw new Error('no registry');
         return r.json();
       })
-      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); updateAuthUI(); })
+      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); refreshIdentityUI(); })
       .catch(() => { /* no registry published — guest mode works fine */ })
-      .finally(() => { updateAuthUI(); game.ui.updateMenuStats(); });
+      .finally(() => { refreshIdentityUI(); game.ui.updateMenuStats(); });
   };
   fetchRegistry();
 

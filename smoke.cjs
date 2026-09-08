@@ -50,7 +50,7 @@ global.matchMedia = () => ({ matches: false });
 global.requestAnimationFrame = global.window.requestAnimationFrame;
 
 /* ---------- load real game code ---------- */
-const files = ['utils', 'storage', 'auth', 'audio', 'particles', 'world', 'player', 'obstacles',
+const files = ['utils', 'storage', 'audio', 'particles', 'world', 'player', 'obstacles',
   'pickups', 'events', 'score', 'ui', 'input', 'game', 'render'];
 for (const f of files) {
   const code = fs.readFileSync(path.join(__dirname, 'js', f + '.js'), 'utf8');
@@ -231,21 +231,6 @@ Save.setPlayer({ pid: GID, provider: 'google', name: 'Zara', avatar: null });
 must(Save.profile().provider === 'google' && Save.profile().best === 9999, 'sign-in adopts registry profile + stats');
 Save.applyRegistry([{ pid: 'hacker_' + 'f'.repeat(10), name: 'x', best: 999999, totalFeathers: 999999, games: 9 }]);
 must(Save.allTotals().best === 9999, 'invalid pids are rejected');
-
-// ---------- auth: JWT decode + pid derivation (no network) ----------
-const b64u = (s) => Buffer.from(s, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const jwtPayload = { iss: 'accounts.google.com', aud: '', exp: Math.floor(Date.now() / 1000) + 300, email_verified: true, sub: '1234', name: 'Test' };
-const token = 'x.' + b64u(JSON.stringify(jwtPayload)) + '.sig';
-const decoded = Auth._decodeJwt(token);
-must(decoded && decoded.sub === '1234' && decoded.name === 'Test', 'JWT payload decodes');
-must(Auth._valid({ ...decoded, aud: 'someone.else.app' }) === false, 'wrong audience rejected');
-must(Auth._valid({ ...decoded, exp: Math.floor(Date.now() / 1000) - 100 }) === false, 'expired JWT rejected');
-must(Auth._valid({ ...decoded, email_verified: false }) === false, 'unverified email rejected');
-must(Auth._valid({ ...decoded, iss: 'https://evil.example' }) === false, 'wrong issuer rejected');
-const fake = Auth._decodeJwt('not.a.jwt');
-must(fake === null, 'malformed JWT rejected');
-const pj = await Auth.playerFor({ sub: '1234', name: 'Test' });
-must(pj.provider === 'google' && /^g_[0-9a-f]{64}$/.test(pj.pid), 'player id is salted g_ + 64-hex hash');
 
 console.log(failures === 0 ? '\nSMOKE TEST: ALL PASSED' : '\nSMOKE TEST: ' + failures + ' FAILURES');
 process.exit(failures === 0 ? 0 : 1);
