@@ -30,9 +30,9 @@ class ScoreSystem {
 
   breakCombo() { this.combo = 0; this.comboT = 0; }
 
-  addFeather() {
-    this.feathers++;
-    this.score += this.game.puBoost > 0 ? 4 : 2;
+  addFeather(mult = 1) {
+    this.feathers += mult;
+    this.score += 2 * mult;
   }
 
   update(dt) {

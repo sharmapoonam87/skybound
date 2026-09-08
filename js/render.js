@@ -50,9 +50,9 @@ Object.assign(Game.prototype, {
       ctx.fillStyle = 'rgba(255,200,87,' + a.toFixed(3) + ')';
       ctx.fillRect(0, 0, w, h);
     }
-    // Time Warp tint
-    if (this.puWarp > 0) {
-      ctx.fillStyle = 'rgba(120,110,255,' + (0.08 + Math.sin(this.t * 3) * 0.02).toFixed(3) + ')';
+    // GHOST / PHANTOM spectral tint
+    if (this.puGhost > 0 || this.puPhantom > 0) {
+      ctx.fillStyle = 'rgba(150,170,255,' + (0.05 + Math.sin(this.t * 3) * 0.015).toFixed(3) + ')';
       ctx.fillRect(0, 0, w, h);
     }
     // vignette (cached)

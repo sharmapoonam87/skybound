@@ -45,6 +45,75 @@ window.addEventListener('DOMContentLoaded', () => {
   on('tg-shake', () => { Save.data.shake = !Save.data.shake; Save.save(); syncToggles(); });
   on('tg-fx', () => { Save.data.fx = !Save.data.fx; Save.save(); syncToggles(); });
 
+  /* ---------- identity: Google sign-in + player registry ---------- */
+  Auth.boot();
+
+  const updateAuthUI = () => {
+    const p = Save.profile();
+    const btn = $('btn-google');
+    if (p.provider === 'google') {
+      btn.textContent = 'SIGN OUT';
+      btn.className = 'btn btn-ghost btn-g';
+    } else {
+      btn.textContent = 'Sign in with Google';
+      btn.className = 'btn btn-g';
+    }
+    game.ui.updateMenuStats();
+  };
+
+  on('btn-google', async () => {
+    const p = Save.profile();
+    if (p.provider === 'google') {
+      Save.signOut();
+      updateAuthUI();
+      game.ui.updateMenuStats();
+      return;
+    }
+    if (!Auth.configured()) {
+      game.ui.banner('GOOGLE SIGN-IN', 'NOT CONFIGURED — ADD YOUR CLIENT ID');
+      return;
+    }
+    try {
+      const cred = await Auth.signIn();
+      const player = await Auth.playerFor(cred);
+      Save.setPlayer(player);
+      updateAuthUI();
+      game.ui.banner('WELCOME BACK', cred.name || 'SKY PILOT');
+    } catch (e) {
+      game.ui.banner('SIGN-IN FAILED', e.message || 'Try again');
+    }
+  });
+
+  on('btn-export', () => {
+    const card = Save.exportCard();
+    try {
+      const blob = new Blob([JSON.stringify(card, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'skybound-card-' + card.pid.slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      prompt('Your SKYBOUND player card (paste me into the merge tool):', JSON.stringify(card, null, 2));
+    }
+  });
+
+  /* load published all-players totals (best effort — 404-safe) */
+  const fetchRegistry = () => {
+    fetch('data/players/players.json', { cache: 'no-cache' })
+      .then(r => {
+        if (!r.ok) throw new Error('no registry');
+        return r.json();
+      })
+      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); updateAuthUI(); })
+      .catch(() => { /* no registry published — guest mode works fine */ })
+      .finally(() => { updateAuthUI(); game.ui.updateMenuStats(); });
+  };
+  fetchRegistry();
+
   /* auto-pause when tab loses focus mid-flight */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && (game.state === 'playing' || game.state === 'ready')) {

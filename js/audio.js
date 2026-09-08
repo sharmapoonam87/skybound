@@ -113,9 +113,18 @@ class AudioSystem {
     notes.forEach((n, i) => this._tone(n, 0.22, { type: 'triangle', vol: 0.13, delay: i * 0.07 }));
   }
 
-  shieldPop() {
-    this._noise(0.25, { vol: 0.3, freq: 2400, slideTo: 300 });
-    this._tone(220, 0.3, { type: 'sawtooth', vol: 0.12, slideTo: 90 });
+  revive() {
+    [392, 523, 659, 880].forEach((n, i) => this._tone(n, 0.26, { type: 'triangle', vol: 0.15, delay: i * 0.08 }));
+    this._noise(0.3, { vol: 0.12, freq: 1800, slideTo: 300 });
+  }
+
+  bomb() {
+    this._noise(0.4, { vol: 0.5, freq: 480, slideTo: 55, type: 'lowpass' });
+    this._tone(72, 0.45, { type: 'sine', vol: 0.4, slideTo: 30 });
+  }
+
+  phased() {
+    this._tone(1100, 0.16, { type: 'sine', vol: 0.12, slideTo: 1900 });
   }
 
   hit() {

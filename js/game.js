@@ -28,8 +28,8 @@ class Game {
     this.speedMult = 1;      // Sky Rush multiplier
     this.windY = 0;          // Wind Zone acceleration
     this.goldenT = 0;        // Golden Sky timer
-    this.puShield = 0; this.puMagnet = 0; this.puWarp = 0; this.puBoost = 0;
-    this.invT = 0;           // post-shield invulnerability
+    this.puSpeed = 0; this.puGhost = 0; this.puRevive = 0; this.puPhantom = 0; this.puFeather = 0;
+    this.invT = 0;           // post-revival / post-hit invulnerability
     this.timeScale = 1; this.tsTarget = 1; this.slowT = 0;
     this.shake = 0; this.flash = 0;
     this.overT = 0; this.overShown = false;
@@ -87,8 +87,8 @@ class Game {
   }
 
   frame(dt) {
-    // time warp / death slow-motion
-    let target = this.puWarp > 0 ? 0.55 : 1;
+    // death slow-motion (time-warp power removed in v2 power set)
+    let target = 1;
     if (this.slowT > 0) { this.slowT -= dt; target = 0.28; }
     this.timeScale = damp(this.timeScale, target, 8, dt);
     const dtw = dt * this.timeScale;
@@ -131,7 +131,9 @@ class Game {
       this.shake = Math.max(this.shake, 5);
     }
 
-    this.speed = this.score.speedFor(S) * this.speedMult;
+    // speed powers multiply the base world speed
+    const spdBase = (this.puSpeed > 0 ? 2 : 1) * (this.puPhantom > 0 ? 1.6 : 1);
+    this.speed = this.score.speedFor(S) * this.speedMult * spdBase;
     this.runDistance += this.speed * dtw;
     this.world.update(dtw, this.speed);
     this.score.update(dtw);
@@ -143,9 +145,10 @@ class Game {
     this.particles.update(dtw);
 
     // power-up timers
-    if (this.puMagnet > 0) this.puMagnet -= dt;
-    if (this.puWarp > 0) this.puWarp -= dt;
-    if (this.puBoost > 0) this.puBoost -= dt;
+    if (this.puSpeed > 0) this.puSpeed -= dt;
+    if (this.puGhost > 0) this.puGhost -= dt;
+    if (this.puPhantom > 0) this.puPhantom -= dt;
+    if (this.puFeather > 0) this.puFeather -= dt;
     if (this.invT > 0) this.invT -= dt;
 
     // gate passes → score + combo
@@ -161,8 +164,8 @@ class Game {
       }
     }
 
-    // collisions
-    if (this.invT <= 0 && p.alive) {
+    // collisions — GHOST / PHANTOM powers phase clean through
+    if (this.invT <= 0 && p.alive && !this.isGhost()) {
       const hit = this.obstacles.hitTest(p.x, p.y, p.r);
       if (hit) this.handleHit(hit);
     }
@@ -170,13 +173,16 @@ class Game {
     // soft ceiling / fatal fall
     if (p.y < p.r + 2) { p.y = p.r + 2; if (p.vy < 0) p.vy = 0; }
     if (p.y > this.h + 60 * S) {
-      if (this.puShield > 0) {
-        this.puShield = 0;
-        p.y = this.h - 80 * S;
+      if (this.puRevive > 0) {
+        // the extra life yanks Lumivane back into the sky
+        this.puRevive = 0;
+        p.y = this.h * 0.28;
         p.vy = -520 * S;
-        this.invT = 1.2;
-        this.audio.shieldPop();
-        this.particles.burst(p.x, p.y, { count: 14, color: '#9fd8ff', speed: 260 * S, life: 0.7, size: 3.4 });
+        this.invT = 2.5;
+        this.audio.revive();
+        this.particles.burst(p.x, p.y, { count: 20, color: '#43d17a', speed: 300 * S, life: 0.9, size: 3.6 });
+        this.particles.text(p.x, p.y - 36 * S, 'EXTRA LIFE!', '#6dff9e', 16);
+        this.shake = Math.max(this.shake, 6);
       } else {
         this.die();
       }
@@ -185,10 +191,11 @@ class Game {
     // HUD
     this.ui.setHUD(this.score.score, Math.max(this.score.best, this.score.score), this.score.feathers);
     const chips = [];
-    if (this.puShield > 0) chips.push({ kind: 'shield', color: '#9fd8ff', label: 'SHIELD', frac: 1 });
-    if (this.puMagnet > 0) chips.push({ kind: 'magnet', color: '#7fe3da', label: 'MAGNET', frac: this.puMagnet / 8 });
-    if (this.puWarp > 0) chips.push({ kind: 'warp', color: '#b28fff', label: 'TIME WARP', frac: this.puWarp / 5 });
-    if (this.puBoost > 0) chips.push({ kind: 'boost', color: '#ffc857', label: 'BOOST x2', frac: this.puBoost / 8 });
+    if (this.puSpeed > 0) chips.push({ kind: 'speed', color: PU_KINDS.speed.color, label: 'SPEED 2X', frac: this.puSpeed / 8 });
+    if (this.puGhost > 0) chips.push({ kind: 'ghost', color: PU_KINDS.ghost.color, label: 'GHOST', frac: this.puGhost / 15 });
+    if (this.puPhantom > 0) chips.push({ kind: 'phantom', color: PU_KINDS.phantom.color, label: 'PHANTOM', frac: this.puPhantom / 30 });
+    if (this.puFeather > 0) chips.push({ kind: 'feather', color: PU_KINDS.feather.color, label: '2X FEATHERS', frac: this.puFeather / 30 });
+    if (this.puRevive > 0) chips.push({ kind: 'revive', color: PU_KINDS.revive.color, label: 'EXTRA LIFE', frac: 1 });
     this.ui.setPowerups(chips);
   }
 
@@ -230,7 +237,7 @@ class Game {
     this.particles.texts.length = 0;
     this.player.reset();
     this.speedMult = 1; this.windY = 0; this.goldenT = 0;
-    this.puShield = 0; this.puMagnet = 0; this.puWarp = 0; this.puBoost = 0;
+    this.puSpeed = 0; this.puGhost = 0; this.puRevive = 0; this.puPhantom = 0; this.puFeather = 0;
     this.invT = 0; this.overT = 0; this.overShown = false;
     this.timeScale = 1; this.tsTarget = 1; this.slowT = 0;
     this.shake = 0; this.flash = 0;
@@ -290,7 +297,7 @@ class Game {
     this.events.reset();
     this.player.reset();
     this.speedMult = 1; this.windY = 0; this.goldenT = 0;
-    this.puShield = 0; this.puMagnet = 0; this.puWarp = 0; this.puBoost = 0;
+    this.puSpeed = 0; this.puGhost = 0; this.puRevive = 0; this.puPhantom = 0; this.puFeather = 0;
     this.ui.showHUD(false);
     this.ui.setTapHint(false);
     this.ui.setPowerups([]);
@@ -299,24 +306,65 @@ class Game {
   }
 
   /* ---------------- gameplay events ---------------- */
+  /* RED GHOST / WHITE PHANTOM → phase through any obstacle */
+  isGhost() { return this.puGhost > 0 || this.puPhantom > 0; }
+
   handleHit(ob) {
     const S = this.S, p = this.player;
-    if (this.puShield > 0) {
-      // shield absorbs the blow
-      this.puShield = 0;
-      this.invT = 1.2;
-      p.vy = -430 * S;
-      p.hitFlash = 1;
-      this.score.breakCombo();
-      this.ui.setCombo(0);
-      this.audio.shieldPop();
-      this.particles.burst(p.x, p.y, { count: 18, color: '#9fd8ff', speed: 300 * S, life: 0.8, size: 3.6 });
-      this.particles.text(p.x, p.y - 40 * S, 'SHIELD!', '#9fd8ff', 16);
-      this.shake = Math.max(this.shake, Save.data.shake ? 9 : 0);
-      ob.passed = true;
+    if (this.isGhost()) {
+      // spectral — nothing to hit
+      this.particles.spawn({
+        x: p.x, y: p.y, life: 0.35, size: 10 * S, sizeEnd: 24 * S,
+        r: 150, g: 170, b: 255, alpha: 0.5, shape: 'ring'
+      });
       return;
     }
+    if (this.puRevive > 0) { this._revive(); return; }
     this.die();
+  }
+
+  /* BOMB — touch and it's over (ghost phases through, extra life saves). */
+  handleBomb(x, y) {
+    if (this.state !== 'playing') return;
+    const S = this.S, p = this.player;
+    this.particles.burst(x, y, { count: 26, color: '#ff5b45', speed: 330 * S, life: 0.9, size: 4.2, add: false });
+    this.particles.burst(x, y, { count: 14, color: '#3a2b33', speed: 200 * S, life: 0.7, size: 3, add: false });
+    if (this.puRevive > 0) {
+      p.vy = -300 * S; // soften the bounce first
+      this._revive('BOMB! EXTRA LIFE!');
+      return;
+    }
+    this.audio.bomb();
+    this.die();
+  }
+
+  /* Ghost flying through a bomb just sparks — no damage. */
+  phasedBomb(x, y) {
+    const S = this.S;
+    this.audio.phased();
+    this.particles.burst(x, y, { count: 8, color: '#b9c6ff', speed: 220 * S, life: 0.5, size: 2.4 });
+    this.particles.text(x, y - 24 * S, 'PHASED!', '#dbe3ff', 13);
+  }
+
+  /* GREEN EXTRA LIFE — consume and carry on flying. */
+  _revive(text) {
+    const S = this.S, p = this.player;
+    this.puRevive = 0;
+    this.invT = 2.5;
+    p.alive = true;
+    p.vy = -430 * S;
+    p.hitFlash = 1;
+    this.score.breakCombo();
+    this.ui.setCombo(0);
+    this.ui.setPowerups([]);
+    this.audio.revive();
+    this.particles.burst(p.x, p.y, { count: 26, color: '#43d17a', speed: 300 * S, life: 0.9, size: 3.6 });
+    this.particles.text(p.x, p.y - 34 * S, text || 'EXTRA LIFE!', '#6dff9e', 16);
+    this.shake = Math.max(this.shake, 6);
+    if (this.state === 'over') {
+      this.state = 'playing';
+      this.overShown = true;
+    }
   }
 
   die() {
@@ -339,13 +387,15 @@ class Game {
 
   onFeather(x, y, isShard) {
     const S = this.S;
-    this.score.addFeather();
+    // YELLOW 2X FEATHERS (and GOLDEN SKY) double the take
+    const mult = (this.puFeather > 0 || this.goldenT > 0) ? 2 : 1;
+    this.score.addFeather(mult);
     this.audio.collect();
     this.particles.burst(x, y, {
       count: isShard ? 8 : 10, color: isShard ? '#8cf0ff' : '#bfeee6',
       speed: 180 * S, life: 0.6, size: 3, sizeEnd: 0.5
     });
-    this.particles.text(x, y - 14 * S, '+1', '#8feee6', 14);
+    this.particles.text(x, y - 14 * S, '+' + (1 * mult), '#8feee6', 14);
     this.particles.spawn({
       x, y, life: 0.45, size: 8 * S, sizeEnd: 26 * S, r: 160, g: 240, b: 230,
       alpha: 0.7, shape: 'ring'
@@ -355,10 +405,11 @@ class Game {
   onPowerup(kind, x, y) {
     const S = this.S;
     const cfg = PU_KINDS[kind];
-    if (kind === 'shield') this.puShield = 1;
-    if (kind === 'warp') this.puWarp = cfg.dur;
-    if (kind === 'magnet') this.puMagnet = cfg.dur;
-    if (kind === 'boost') this.puBoost = cfg.dur;
+    if (kind === 'speed') this.puSpeed = cfg.dur;
+    if (kind === 'ghost') this.puGhost = cfg.dur;
+    if (kind === 'revive') this.puRevive = 1;
+    if (kind === 'phantom') this.puPhantom = cfg.dur;
+    if (kind === 'feather') this.puFeather = cfg.dur;
     this.audio.powerup();
     this.particles.burst(x, y, { count: 16, color: cfg.color, speed: 260 * S, life: 0.8, size: 3.4 });
     this.particles.text(x, y - 20 * S, cfg.label, cfg.color, 15);

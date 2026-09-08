@@ -15,7 +15,10 @@ class UIManager {
       pause: $('screen-pause'), over: $('screen-over'),
       menuBest: $('menu-best'), menuFeathers: $('menu-feathers'),
       goScore: $('go-score'), goBest: $('go-best'), goDistance: $('go-distance'),
-      goFeathers: $('go-feathers'), goRecord: $('go-record')
+      goFeathers: $('go-feathers'), goRecord: $('go-record'),
+      profileName: $('profile-name'), profileTag: $('profile-tag'), profileAvatar: $('profile-avatar'),
+      pstatMyBest: $('pstat-mybest'), pstatMyGames: $('pstat-mygames'),
+      pstatAllBest: $('pstat-allbest'), pstatAllFeathers: $('pstat-allfeathers')
     };
     this._bannerTimer = null;
   }
@@ -33,8 +36,20 @@ class UIManager {
   setTapHint(v) { this.els.tapHint.classList.toggle('hidden', !v); }
 
   updateMenuStats() {
+    const p = Save.profile();
+    const all = Save.allTotals();
     this.els.menuBest.textContent = pad(Save.data.best, 6);
     this.els.menuFeathers.textContent = Save.data.totalFeathers;
+    // player card
+    const google = p.provider === 'google';
+    this.els.profileName.textContent = p.name || 'SKY PILOT';
+    this.els.profileTag.textContent = google ? 'GOOGLE PILOT' : 'GUEST PILOT';
+    this.els.profileAvatar.textContent = google ? '🐦' : '🕊';
+    if (google && p.avatar) this.els.profileAvatar.textContent = '';
+    this.els.pstatMyBest.textContent = pad(Save.data.best, 6);
+    this.els.pstatMyGames.textContent = Save.data.totalFeathers;
+    this.els.pstatAllBest.textContent = pad(all.best, 6);
+    this.els.pstatAllFeathers.textContent = all.totalFeathers;
   }
 
   setHUD(score, best, feathers) {

@@ -50,7 +50,7 @@ global.matchMedia = () => ({ matches: false });
 global.requestAnimationFrame = global.window.requestAnimationFrame;
 
 /* ---------- load real game code ---------- */
-const files = ['utils', 'storage', 'audio', 'particles', 'world', 'player', 'obstacles',
+const files = ['utils', 'storage', 'auth', 'audio', 'particles', 'world', 'player', 'obstacles',
   'pickups', 'events', 'score', 'ui', 'input', 'game', 'render'];
 for (const f of files) {
   const code = fs.readFileSync(path.join(__dirname, 'js', f + '.js'), 'utf8');
@@ -115,20 +115,50 @@ holdBird();
 for (let i = 0; i < 300; i++) { holdBird(); if (i % 30 === 0) game.onTap(); game.frame(1 / 60); game.render(); }
 must(game.state === 'playing', 'bird survives a clean corridor');
 
-// power-ups
+// power-ups (v2 set: speed / ghost / revive / phantom / feather)
 holdBird();
-game.onPowerup('shield', 100, 100);
-must(game.puShield === 1, 'shield powerup applies');
+game.onPowerup('speed', 100, 100);
+must(game.puSpeed > 0, 'SPEED 2X applies (puSpeed timer set)');
+const baseSpeed = game.speed;
+game.frame(1 / 60);
+must(game.speed >= baseSpeed * 1.9, 'SPEED 2X doubles world speed');
+game.puSpeed = 0;
+
+game.onPowerup('ghost', 100, 100);
+must(game.puGhost > 0, 'GHOST applies');
 game.handleHit(game.obstacles.obs[0] || { passed: false });
-must(game.puShield === 0 && game.state === 'playing', 'shield absorbs a hit');
-game.onPowerup('magnet', 100, 100);
-game.onPowerup('warp', 100, 100);
-game.onPowerup('boost', 100, 100);
+must(game.state === 'playing' && game.puGhost > 0, 'GHOST phases through obstacles unharmed');
+game.pickups.bombs.push({ x: game.player.x, y: game.player.y, ph: 0, t: 0 });
+game.frame(1 / 60);
+must(game.state === 'playing' && game.pickups.bombs.length === 0, 'GHOST phases through a bomb');
+game.puGhost = 0;
+
+game.onPowerup('revive', 100, 100);
+must(game.puRevive === 1, 'EXTRA LIFE applies (one revival)');
+game.handleHit(game.obstacles.obs[0] || { passed: false });
+must(game.puRevive === 0 && game.state === 'playing', 'EXTRA LIFE consumed on a hit — still flying');
+must(game.invT > 0, 'revival grants brief invulnerability');
+
+game.onPowerup('phantom', 100, 100);
+game.onPowerup('feather', 100, 100);
 holdBird(); game.frame(1 / 60);
-must(game.puMagnet > 0 && game.puWarp > 0 && game.puBoost > 0, 'all powerup timers set');
-game.puWarp = 0.02;
+must(game.puPhantom > 0 && game.puFeather > 0, 'PHANTOM + 2X FEATHERS timers set');
+must(game.isGhost(), 'isGhost() true under ghost OR phantom');
+const fBefore = game.score.feathers;
+game.onFeather(100, 100);
+must(game.score.feathers === fBefore + 2, '2X FEATHERS doubles the feather take');
+game.puPhantom = 0; game.puFeather = 0;
+game.onFeather(100, 100);
+must(game.score.feathers === fBefore + 3, 'normal feathers restore to +1');
+game.puPhantom = 0.02; game.puFeather = 0.02; game.puSpeed = 0.02;
 for (let i = 0; i < 5; i++) { holdBird(); game.frame(1 / 60); }
-must(game.puWarp <= 0, 'time warp expires');
+must(game.puPhantom <= 0 && game.puFeather <= 0 && game.puSpeed <= 0, 'timed powers expire');
+
+// BOMB — touch and the flight ends unless ghost/revive
+holdBird();
+game.pickups.bombs.push({ x: game.player.x, y: game.player.y, ph: 0, t: 0 });
+game.frame(1 / 60);
+must(game.state === 'over', 'BOMB touch kills instantly');
 
 // special events
 for (const t of ['rush', 'wind', 'storm', 'golden']) {
@@ -183,5 +213,40 @@ holdBird();
 for (let i = 0; i < 30; i++) { holdBird(); game.frame(1 / 60); game.render(); }
 must(game.w === 820 && game.h === 500 && game.state === 'playing', 'resize re-scales cleanly mid-run');
 
+(async () => {
+// ---------- player profiles / identity registry ----------
+Save.data.players = {};
+Save.save();
+const prof = Save.profile();
+must(prof.provider === 'guest' && /^guest_[0-9a-f]{16}$/.test(prof.pid), 'guest profile auto-created with valid pid');
+Save.submitRun(120, 7);
+must(Save.data.best === 120 && Save.data.totalFeathers === 7, 'run recorded on guest profile');
+const rec2 = Save.submitRun(80, 3);
+must(rec2 === false && Save.data.best === 120, 'non-record does not overwrite best');
+const GID = 'g_' + ('0123456789abcdef').repeat(4);
+Save.applyRegistry([{ pid: GID, name: 'Zara', best: 9999, totalFeathers: 321, games: 40, updatedAt: '2026-01-01T00:00:00.000Z' }]);
+const all = Save.allTotals();
+must(all.best === 9999 && all.totalFeathers === 321 + 7 + 3, 'registry merges monotonic (best + all feathers)');
+Save.setPlayer({ pid: GID, provider: 'google', name: 'Zara', avatar: null });
+must(Save.profile().provider === 'google' && Save.profile().best === 9999, 'sign-in adopts registry profile + stats');
+Save.applyRegistry([{ pid: 'hacker_' + 'f'.repeat(10), name: 'x', best: 999999, totalFeathers: 999999, games: 9 }]);
+must(Save.allTotals().best === 9999, 'invalid pids are rejected');
+
+// ---------- auth: JWT decode + pid derivation (no network) ----------
+const b64u = (s) => Buffer.from(s, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const jwtPayload = { iss: 'accounts.google.com', aud: '', exp: Math.floor(Date.now() / 1000) + 300, email_verified: true, sub: '1234', name: 'Test' };
+const token = 'x.' + b64u(JSON.stringify(jwtPayload)) + '.sig';
+const decoded = Auth._decodeJwt(token);
+must(decoded && decoded.sub === '1234' && decoded.name === 'Test', 'JWT payload decodes');
+must(Auth._valid({ ...decoded, aud: 'someone.else.app' }) === false, 'wrong audience rejected');
+must(Auth._valid({ ...decoded, exp: Math.floor(Date.now() / 1000) - 100 }) === false, 'expired JWT rejected');
+must(Auth._valid({ ...decoded, email_verified: false }) === false, 'unverified email rejected');
+must(Auth._valid({ ...decoded, iss: 'https://evil.example' }) === false, 'wrong issuer rejected');
+const fake = Auth._decodeJwt('not.a.jwt');
+must(fake === null, 'malformed JWT rejected');
+const pj = await Auth.playerFor({ sub: '1234', name: 'Test' });
+must(pj.provider === 'google' && /^g_[0-9a-f]{64}$/.test(pj.pid), 'player id is salted g_ + 64-hex hash');
+
 console.log(failures === 0 ? '\nSMOKE TEST: ALL PASSED' : '\nSMOKE TEST: ' + failures + ' FAILURES');
 process.exit(failures === 0 ? 0 : 1);
+})();

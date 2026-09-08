@@ -1,13 +1,15 @@
 'use strict';
 /* ============================================================
    SKYBOUND · pickups.js — glowing feathers, power-up orbs,
-   and crystal-storm shards. Magnet attraction included.
+   crystal-storm shards, and bombs.
    ============================================================ */
+/* The five circle power-ups (color-coded) — plus the BOMB hazard. */
 const PU_KINDS = {
-  shield: { color: '#9fd8ff', label: 'SKY SHIELD',  dur: 0 },      // consumed on hit
-  warp:   { color: '#b28fff', label: 'TIME WARP',   dur: 5 },
-  magnet: { color: '#7fe3da', label: 'FEATHER MAGNET', dur: 8 },
-  boost:  { color: '#ffc857', label: 'SCORE BOOST', dur: 8 }
+  speed:   { color: '#4fa3ff', label: 'SPEED 2X',    dur: 8  },  // blue  — double speed
+  ghost:   { color: '#ff5d6b', label: 'GHOST',       dur: 15 },  // red   — phase through obstacles
+  revive:  { color: '#43d17a', label: 'EXTRA LIFE',  dur: 0  },  // green — one revival
+  phantom: { color: '#e9ecff', label: 'PHANTOM',     dur: 30 },  // white — invisible 30s + speed
+  feather: { color: '#ffd94f', label: '2X FEATHERS', dur: 30 }   // yellow— double feathers
 };
 
 class PickupManager {
@@ -17,8 +19,10 @@ class PickupManager {
     this.feathers = [];
     this.powerups = [];
     this.shards = [];
+    this.bombs = [];
     this.featherTimer = 1.6;
     this.powerupTimer = rand(9, 15);
+    this.bombTimer = rand(13, 20);
     this.shardStormT = 0;
     this.shardSpawnT = 0;
   }
@@ -70,8 +74,6 @@ class PickupManager {
 
   update(dt, speed) {
     const g = this.game, S = g.S, p = g.player;
-    const magnetR = 300 * S;
-    const magnetOn = g.puMagnet > 0;
 
     // spawning only during active flight
     if (g.state === 'playing') {
@@ -86,6 +88,12 @@ class PickupManager {
         this.powerupTimer = rand(14, 22);
         this.spawnPowerup();
       }
+      // bombs appear sparingly — always off the safe corridor
+      this.bombTimer -= dt;
+      if (this.bombTimer <= 0) {
+        this.bombTimer = rand(11, 19);
+        this.spawnBomb();
+      }
       if (this.shardStormT > 0) {
         this.shardStormT -= dt;
         this.shardSpawnT -= dt;
@@ -99,22 +107,12 @@ class PickupManager {
       }
     }
 
-    // feathers drift + magnet + collect
+    // feathers drift + collect
     for (let i = this.feathers.length - 1; i >= 0; i--) {
       const f = this.feathers[i];
       f.t += dt;
       f.x -= speed * dt;
       f.y += Math.sin(f.t * 2.4 + f.ph) * 12 * S * dt;
-      if (magnetOn) {
-        const dx = p.x - f.x, dy = p.y - f.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < magnetR * magnetR) {
-          const d = Math.sqrt(d2) || 1;
-          const pull = 900 * S * (1 - d / magnetR);
-          f.x += (dx / d) * pull * dt;
-          f.y += (dy / d) * pull * dt;
-        }
-      }
       if (f.x < -40 * S) { this.feathers.splice(i, 1); continue; }
       const dx = p.x - f.x, dy = p.y - f.y;
       const cr = (18 + p.r) * S;
@@ -147,15 +145,6 @@ class PickupManager {
       s.y += s.vy * dt;
       s.vx = lerp(s.vx, -speed, dt * 2);
       if (s.y > g.h + 40 * S || s.x < -40 * S) { this.shards.splice(i, 1); continue; }
-      if (magnetOn) {
-        const dx = p.x - s.x, dy = p.y - s.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < magnetR * magnetR * 0.6) {
-          const d = Math.sqrt(d2) || 1;
-          s.x += (dx / d) * 700 * S * dt;
-          s.y += (dy / d) * 700 * S * dt;
-        }
-      }
       const dx = p.x - s.x, dy = p.y - s.y;
       const cr = (16 + p.r) * S;
       if (p.alive && dx * dx + dy * dy < cr * cr) {
@@ -163,6 +152,44 @@ class PickupManager {
         g.onFeather(s.x, s.y, true);
       }
     }
+
+    // BOMBS — touch and the flight ends (ghost phases through)
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const b = this.bombs[i];
+      b.t += dt;
+      b.x -= speed * dt;
+      b.y += Math.sin(b.t * 2.2 + b.ph) * 14 * S * dt;
+      if (b.x < -60 * S) { this.bombs.splice(i, 1); continue; }
+      const dx = p.x - b.x, dy = p.y - b.y;
+      const cr = (16 + p.r) * S;
+      if (p.alive && dx * dx + dy * dy < cr * cr) {
+        this.bombs.splice(i, 1);
+        if (g.isGhost()) g.phasedBomb(b.x, b.y);
+        else g.handleBomb(b.x, b.y);
+      }
+    }
+  }
+
+  /* Bombs always spawn OUTSIDE the upcoming gate corridor so the
+     player keeps one clean path — danger you can read, never a
+     wall of defeats. */
+  spawnBomb() {
+    const g = this.game, S = g.S;
+    let y = null;
+    for (const ob of g.obstacles.obs) {
+      if (ob.x > g.w * 0.6 && ob.x < g.w * 2.4) {
+        const gapTop = ob.gapY - ob.gapH / 2;
+        const gapBot = ob.gapY + ob.gapH / 2;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const off = rand(46, 96) * S;
+        y = clamp(side < 0 ? gapTop - off : gapBot + off, 60 * S, g.h - 60 * S);
+        break;
+      }
+    }
+    if (y === null) {
+      y = Math.random() < 0.5 ? rand(60 * S, g.h * 0.3) : rand(g.h * 0.7, g.h - 60 * S);
+    }
+    this.bombs.push({ x: g.w + 160 * S, y, ph: rand(TAU), t: rand(20) });
   }
 
   draw(ctx) {
@@ -254,46 +281,125 @@ class PickupManager {
       ctx.restore();
     }
     ctx.globalCompositeOperation = 'source-over';
+
+    // BOMBS — pulsing red danger, fuse spark, rotating spikes
+    for (const b of this.bombs) {
+      if (b.x < -50 || b.x > g.w + 90 * S) continue;
+      const pulse = 0.72 + Math.sin(b.t * 5.5 + b.ph) * 0.28;
+      const danger = clamp(1 - (b.x - g.w * 0.4) / (g.w * 0.8), 0, 1) * (b.x < g.w ? 1 : 0);
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Math.sin(b.t * 1.3 + b.ph) * 0.16);
+      // red halo
+      ctx.globalCompositeOperation = 'lighter';
+      const rg = ctx.createRadialGradient(0, 0, 2 * S, 0, 0, 34 * S);
+      rg.addColorStop(0, 'rgba(255,70,52,' + (0.62 * pulse).toFixed(2) + ')');
+      rg.addColorStop(1, 'rgba(255,70,52,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(0, 0, 34 * S, 0, TAU); ctx.fill();
+      // warning ring (stronger near the player)
+      ctx.strokeStyle = rgbaStr(hexRGB('#ff5b45'), 0.35 + danger * 0.45);
+      ctx.lineWidth = 2 * S;
+      ctx.setLineDash([7 * S, 6 * S]);
+      ctx.lineDashOffset = -b.t * 40 * S;
+      ctx.beginPath(); ctx.arc(0, 0, 22 * S + danger * 5 * S, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalCompositeOperation = 'source-over';
+      // spikes (rotating)
+      ctx.rotate(b.t * 1.8);
+      const spikes = 8;
+      ctx.fillStyle = '#3a2b33';
+      ctx.beginPath();
+      for (let i = 0; i < spikes; i++) {
+        const a0 = i / spikes * TAU, a1 = (i + 0.5) / spikes * TAU;
+        ctx.moveTo(Math.cos(a0) * 13 * S, Math.sin(a0) * 13 * S);
+        ctx.lineTo(Math.cos(a1) * 13 * S, Math.sin(a1) * 13 * S);
+        ctx.lineTo(Math.cos((i + 0.6) / spikes * TAU) * 17.5 * S, Math.sin((i + 0.6) / spikes * TAU) * 17.5 * S);
+      }
+      ctx.closePath(); ctx.fill();
+      // black core
+      const bg = ctx.createRadialGradient(-1.5 * S, -1.5 * S, 1 * S, 0, 0, 11 * S);
+      bg.addColorStop(0, '#4a3f4d');
+      bg.addColorStop(1, '#140e18');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(0, 0, 11 * S, 0, TAU); ctx.fill();
+      // glowing fuse
+      ctx.strokeStyle = 'rgba(255,220,150,0.95)';
+      ctx.lineWidth = 1.6 * S;
+      ctx.beginPath(); ctx.moveTo(0, -10 * S); ctx.quadraticCurveTo(3 * S, -14 * S, 6 * S, -17 * S); ctx.stroke();
+      const fr = ctx.createRadialGradient(6 * S, -17 * S, 0.6 * S, 6 * S, -17 * S, 4 * S);
+      fr.addColorStop(0, 'rgba(255,240,190,' + (0.5 + pulse * 0.5).toFixed(2) + ')');
+      fr.addColorStop(1, 'rgba(255,240,190,0)');
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = fr;
+      ctx.beginPath(); ctx.arc(6 * S, -17 * S, 4 * S, 0, TAU); ctx.fill();
+      // menacing white slits
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(255,235,235,0.9)';
+      ctx.beginPath(); ctx.arc(-3.6 * S, -1.8 * S, 2 * S, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(-3.6 * S, -1.8 * S, 0.9 * S, 0, TAU); ctx.fillStyle = '#160b12'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,235,235,0.9)';
+      ctx.beginPath(); ctx.arc(3.6 * S, -1.8 * S, 2 * S, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(3.6 * S, -1.8 * S, 0.9 * S, 0, TAU); ctx.fillStyle = '#160b12'; ctx.fill();
+      ctx.restore();
+    }
   }
 
   _icon(ctx, kind, S) {
     ctx.lineWidth = 1.8 * S;
     ctx.strokeStyle = 'rgba(10,30,50,0.85)';
     ctx.fillStyle = 'rgba(10,30,50,0.85)';
-    if (kind === 'shield') {
+    if (kind === 'speed') {
+      // double chevrons pointed right
       ctx.beginPath();
-      ctx.moveTo(0, -6.5 * S);
-      ctx.lineTo(5.5 * S, -4 * S);
-      ctx.lineTo(5.5 * S, 1.5 * S);
-      ctx.quadraticCurveTo(5.5 * S, 5.5 * S, 0, 7 * S);
-      ctx.quadraticCurveTo(-5.5 * S, 5.5 * S, -5.5 * S, 1.5 * S);
-      ctx.lineTo(-5.5 * S, -4 * S);
-      ctx.closePath();
-      ctx.stroke();
-    } else if (kind === 'warp') {
-      ctx.beginPath(); ctx.arc(0, 0, 6.5 * S, 0, TAU); ctx.stroke();
+      ctx.moveTo(-5 * S, -4 * S); ctx.lineTo(0.5 * S, -6 * S); ctx.lineTo(5.5 * S, -3.5 * S);
+      ctx.closePath(); ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(0, -4.2 * S);
-      ctx.moveTo(0, 0); ctx.lineTo(3.4 * S, 1.6 * S);
-      ctx.stroke();
-    } else if (kind === 'magnet') {
-      ctx.beginPath();
-      ctx.arc(0, -1 * S, 5 * S, Math.PI * 0.15, Math.PI * 0.85, true);
-      ctx.stroke();
-      ctx.fillRect(-6.2 * S, -2.4 * S, 2.6 * S, 5 * S);
-      ctx.fillRect(3.6 * S, -2.4 * S, 2.6 * S, 5 * S);
-    } else if (kind === 'boost') {
+      ctx.moveTo(-5 * S, 4 * S); ctx.lineTo(0.5 * S, 6 * S); ctx.lineTo(5.5 * S, 3.5 * S);
+      ctx.closePath(); ctx.fill();
+    } else if (kind === 'ghost') {
+      // semi-transparent ghost blob
       ctx.beginPath();
       ctx.moveTo(0, -7 * S);
-      ctx.lineTo(1.8 * S, -1.8 * S);
-      ctx.lineTo(7 * S, 0);
-      ctx.lineTo(1.8 * S, 1.8 * S);
-      ctx.lineTo(0, 7 * S);
-      ctx.lineTo(-1.8 * S, 1.8 * S);
-      ctx.lineTo(-7 * S, 0);
-      ctx.lineTo(-1.8 * S, -1.8 * S);
-      ctx.closePath();
-      ctx.fill();
+      ctx.quadraticCurveTo(-5.5 * S, -5 * S, -5.5 * S, 1 * S);
+      ctx.quadraticCurveTo(-5.5 * S, 5 * S, -3 * S, 6 * S);
+      ctx.quadraticCurveTo(0, 8 * S, 3 * S, 6 * S);
+      ctx.quadraticCurveTo(5.5 * S, 5 * S, 5.5 * S, 1 * S);
+      ctx.quadraticCurveTo(5.5 * S, -5 * S, 0, -7 * S);
+      ctx.closePath(); ctx.fill();
+      // eyes
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(-3.4 * S, -4 * S, 1.9 * S, 2.3 * S);
+      ctx.fillRect(1.5 * S, -4 * S, 1.9 * S, 2.3 * S);
+    } else if (kind === 'revive') {
+      // heart with cross
+      ctx.beginPath();
+      ctx.moveTo(0, -5.5 * S);
+      ctx.quadraticCurveTo(-4 * S, -2.5 * S, -4.5 * S, 0.5 * S);
+      ctx.quadraticCurveTo(-5 * S, 2.5 * S, 0, 4 * S);
+      ctx.quadraticCurveTo(5 * S, 2.5 * S, 4.5 * S, 0.5 * S);
+      ctx.quadraticCurveTo(4 * S, -2.5 * S, 0, -5.5 * S);
+      ctx.closePath(); ctx.fill();
+      ctx.fillRect(-1 * S, -8.5 * S, 2 * S, 4 * S);
+      ctx.fillRect(-3.5 * S, -5 * S, 7 * S, 2 * S);
+    } else if (kind === 'phantom') {
+      // swirl — invisible yet fast
+      ctx.beginPath(); ctx.arc(0, 0, 6.5 * S, 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -5 * S);
+      ctx.arc(0, 0, 5 * S, -Math.PI / 2, Math.PI * 0.55);
+      ctx.stroke();
+    } else if (kind === 'feather') {
+      // feather quill
+      ctx.beginPath();
+      ctx.moveTo(0, -6.5 * S);
+      ctx.quadraticCurveTo(-4 * S, -2 * S, -3 * S, 3.5 * S);
+      ctx.quadraticCurveTo(-1.5 * S, 6.5 * S, 0, 6.5 * S);
+      ctx.quadraticCurveTo(1.5 * S, 6.5 * S, 3 * S, 3.5 * S);
+      ctx.quadraticCurveTo(4 * S, -2 * S, 0, -6.5 * S);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, -7 * S); ctx.lineTo(0, 7 * S); ctx.stroke();
     }
   }
 }

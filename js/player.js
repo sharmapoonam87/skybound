@@ -71,8 +71,8 @@ class Player {
         : Math.min(1.35, this.vy / (620 * g.S));
       this.rot = damp(this.rot, target, this.vy < 0 ? 11 : 7.5, dt);
 
-      // speed trail under rush / dive / boost
-      if ((g.speedMult > 1.2 || this.vy > 600 * g.S || g.puBoost > 0) && Save.data.fx) {
+      // speed trail under rush / dive / speed powers
+      if ((g.speedMult > 1.2 || g.puSpeed > 0 || g.puPhantom > 0 || this.vy > 600 * g.S) && Save.data.fx) {
         this.trail.push({ x: this.x, y: this.y, a: 0.5 });
       }
       for (let i = this.trail.length - 1; i >= 0; i--) {
@@ -116,23 +116,9 @@ class Player {
     const sq = 1 + this.flapAnim * 0.14;
     ctx.scale((2 - sq) * u, sq * u); // squash & stretch
 
-    // shield bubble
-    if (g.puShield > 0) {
-      ctx.save();
-      ctx.scale(1 / u, 1 / u);
-      const sa = 0.35 + Math.sin(this.bobT * 6) * 0.12;
-      const sg = ctx.createRadialGradient(0, 0, 14, 0, 0, 30);
-      sg.addColorStop(0, 'rgba(159,216,255,0)');
-      sg.addColorStop(0.75, 'rgba(159,216,255,' + (sa * 0.5).toFixed(3) + ')');
-      sg.addColorStop(1, 'rgba(159,216,255,' + sa.toFixed(3) + ')');
-      ctx.fillStyle = sg;
-      ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill();
-      ctx.strokeStyle = 'rgba(220,242,255,0.85)';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.arc(0, 0, 30, this.bobT * 2, this.bobT * 2 + 1.2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, 30, this.bobT * 2 + Math.PI, this.bobT * 2 + Math.PI + 1.2); ctx.stroke();
-      ctx.restore();
-    }
+    // GHOST / PHANTOM — spectral veil (bird phases through the world)
+    const ghost = g.puGhost > 0 || g.puPhantom > 0;
+    if (ghost) ctx.globalAlpha = 0.45;
 
     const flapA = -0.18 + Math.sin(this.wingPhase) * 0.5 - this.flapAnim * 1.15;
     this._tail(ctx, u);
@@ -148,6 +134,19 @@ class Player {
       ctx.globalAlpha = 1;
     }
     ctx.restore();
+
+    // ghosty shimmer ring around the phase-shifted bird
+    if (ghost) {
+      const sa = 0.3 + Math.sin(this.bobT * 6) * 0.12;
+      ctx.strokeStyle = 'rgba(170,190,255,' + sa.toFixed(3) + ')';
+      ctx.lineWidth = 2 * u;
+      ctx.setLineDash([10 * u, 8 * u]);
+      ctx.lineDashOffset = -this.bobT * 30 * u;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.ellipse(this.x, this.y, 24 * u, 15 * u, 0, this.rot, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
   }
 
   _feather(ctx, len, wid) {

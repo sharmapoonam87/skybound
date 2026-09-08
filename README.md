@@ -30,21 +30,31 @@ fall back gracefully).
   movement are randomized with fairness guarantees (gap always reachable,
   moving gates clamped to safe bounds).
 - **Combo** — chain gate passes within 6s for up to a x5 score multiplier.
-- **Power-ups** — Sky Shield (absorbs one hit), Time Warp (slows the world),
-  Feather Magnet, Score Boost.
+- **Five color-coded power-ups** (circles) —
+  **BLUE · SPEED 2X** (8s), **RED · GHOST** (phase through everything, 15s),
+  **GREEN · EXTRA LIFE** (one revival), **WHITE · PHANTOM** (invisible + fast,
+  30s), **YELLOW · 2X FEATHERS** (30s).
+- **Bombs** — ticking hazards that end the flight on touch (ghost phases
+  through them; extra life survives them). Spawn off the safe corridor.
 - **Special events** — Sky Rush, Wind Zone, Crystal Storm, Golden Sky.
 - **Environment** — 7 blended sky phases with parallax mountains, sprite-baked
   clouds, floating islands, weather, shooting stars and aurora.
-- **Persistence** — best score, lifetime feathers and settings in
-  `localStorage`.
+- **Identity & stats** — optional Google sign-in keeps your best score and
+  lifetime feathers on your own player ID (hashed, no email stored). The menu
+  shows **MY BEST / MY FEATHERS** and the **ALL PLAYERS** totals from the
+  published registry in `data/players/`. Guests auto-get a local pilot profile.
+- **Persistence** — best score, lifetime feathers, settings and player
+  profiles in `localStorage`; exported cards feed `data/players/players.json`
+  through `data/players/merge.cjs`.
 
 ## Project layout
 
 ```
-index.html        canvas + HUD + screens
+index.html        canvas + HUD + screens (About, player card, sign-in)
 css/style.css     premium game UI
-js/               utils · storage · audio · particles · world · player ·
-                  obstacles · pickups · events · score · ui · input ·
-                  game · render · main
+js/               utils · storage · auth · audio · particles · world ·
+                  player · obstacles · pickups · events · score · ui ·
+                  input · game · render · main
+data/players/     player registry (players.json · merge.cjs · README)
 smoke.cjs         headless Node smoke test (node smoke.cjs)
 ```
