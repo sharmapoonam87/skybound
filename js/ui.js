@@ -18,8 +18,7 @@ class UIManager {
       goFeathers: $('go-feathers'), goRecord: $('go-record'),
       profileName: $('profile-name'), profileTag: $('profile-tag'), profileAvatar: $('profile-avatar'),
       pstatMyBest: $('pstat-mybest'), pstatMyGames: $('pstat-mygames'),
-      pstatAllBest: $('pstat-allbest'), pstatAllFeathers: $('pstat-allfeathers'),
-      leaderboardList: $('leaderboard-list')
+      pstatAllBest: $('pstat-allbest'), pstatAllFeathers: $('pstat-allfeathers')
     };
     this._bannerTimer = null;
   }
@@ -51,35 +50,6 @@ class UIManager {
     this.els.pstatMyGames.textContent = Save.data.totalFeathers;
     this.els.pstatAllBest.textContent = pad(all.best, 6);
     this.els.pstatAllFeathers.textContent = all.totalFeathers;
-    // leaderboard — everyone's scores, best first
-    this._buildLeaderboard();
-  }
-
-  _buildLeaderboard() {
-    const host = this.els.leaderboardList;
-    const players = Object.values(Save.data.players)
-      .sort((a, b) => (b.best - a.best) || (b.totalFeathers - a.totalFeathers))
-      .slice(0, 5);
-    if (!players.length) {
-      host.innerHTML = '<div class="lb-empty">No pilots yet — play a round and export your card!</div>';
-      return;
-    }
-    host.innerHTML = '';
-    players.forEach((r, i) => {
-      const name = r.provider === 'google' ? (r.name || 'Pilot') : 'Guest Pilot';
-      const row = document.createElement('div');
-      row.className = 'lb-row';
-      row.innerHTML = '<span class="lb-pos">' + (i + 1) + '</span>' +
-        '<span class="lb-name"></span>' +
-        '<span class="lb-feathers">' + r.totalFeathers + '</span>' +
-        '<span class="lb-score">' + pad(r.best, 6) + '</span>';
-      row.querySelector('.lb-name').textContent = name;
-      host.appendChild(row);
-    });
-    const note = document.createElement('div');
-    note.className = 'lb-note';
-    note.textContent = 'Sign in with Google and export your card so your score joins everyone else\'s.';
-    host.appendChild(note);
   }
 
   setHUD(score, best, feathers) {

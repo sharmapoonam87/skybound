@@ -125,13 +125,10 @@ class Game {
     // milestone: constant speed, stepped every 1000 score
     const ms = this.score.milestone();
     if (ms > 0) {
-      this.ui.banner('SPEED UP', 'THE SKY QUICKENS · BOMBS INBOUND');
+      this.ui.banner('SPEED UP', 'THE SKY QUICKENS');
       this.audio.milestone();
       this.particles.burst(p.x, p.y, { count: 16, color: '#ffc857', speed: 240 * S, life: 0.8, size: 3.4 });
-      this.particles.text(p.x, p.y - 56 * S, 'BOMBS INBOUND!', '#ff5b45', 15);
       this.shake = Math.max(this.shake, 5);
-      // every 1000 points guarantees a fresh bomb wave ahead
-      this.pickups.spawnBomb(true);
     }
 
     // speed powers multiply the base world speed
