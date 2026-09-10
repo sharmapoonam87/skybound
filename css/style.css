@@ -135,38 +135,9 @@ html, body {
 .btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
 /* ================= Player card / identity ================= */
-.player-card {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  width: min(92vw, 430px);
-  border-radius: 20px;
-  background: linear-gradient(150deg, rgba(16, 34, 66, .72), rgba(8, 18, 40, .55));
-  border: 1px solid rgba(79, 163, 255, .35);
-  box-shadow: 0 14px 44px rgba(2, 6, 20, .5), inset 0 1px 0 rgba(255,255,255,.1);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.player-head { display: flex; align-items: center; gap: 12px; width: 100%; }
-.player-avatar {
-  width: 42px; height: 42px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem; background: rgba(53, 199, 216, .14);
-  border: 1px solid rgba(79, 163, 255, .45);
-}
-.player-id-wrap { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.player-name { font-family: var(--font-display); font-size: 1rem; letter-spacing: .06em; color: #fff; }
-.player-tag { font-size: .6rem; font-weight: 700; letter-spacing: .28em; color: var(--text-dim); }
+/* (removed — menu now shows only the BEST SCORE pill) */
 
 .btn-sm { min-width: 120px; padding: 7px 14px; font-size: .66rem; letter-spacing: .1em; }
-
-.player-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
-.pstat {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 7px 4px; border-radius: 12px;
-  background: rgba(255, 255, 255, .05);
-}
-.pstat-label { font-size: .52rem; font-weight: 700; letter-spacing: .18em; color: var(--text-dim); }
-.pstat-value { font-family: var(--font-display); font-size: .92rem; letter-spacing: .05em; color: #fff; font-variant-numeric: tabular-nums; }
-.pstat:nth-child(2) .pstat-value, .pstat:nth-child(1) .pstat-value { color: var(--cyan); }
-.pstat:nth-child(3) .pstat-value, .pstat:nth-child(4) .pstat-value { color: var(--gold); text-shadow: 0 0 10px rgba(255, 200, 87, .4); }
 
 /* ================= About the game ================= */
 .about-box {

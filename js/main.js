@@ -45,20 +45,7 @@ window.addEventListener('DOMContentLoaded', () => {
   on('tg-shake', () => { Save.data.shake = !Save.data.shake; Save.save(); syncToggles(); });
   on('tg-fx', () => { Save.data.fx = !Save.data.fx; Save.save(); syncToggles(); });
 
-  /* ---------- identity: local guest profile + player registry ---------- */
-
-  /* load published all-players totals (best effort — 404-safe) */
-  const fetchRegistry = () => {
-    fetch('data/players/players.json', { cache: 'no-cache' })
-      .then(r => {
-        if (!r.ok) throw new Error('no registry');
-        return r.json();
-      })
-      .then(data => { Save.applyRegistry(data && data.players ? data.players : []); game.ui.updateMenuStats(); })
-      .catch(() => { /* no registry published — guest mode works fine */ })
-      .finally(() => { game.ui.updateMenuStats(); });
-  };
-  fetchRegistry();
+  /* ---------- identity: local guest profile (saved on this device) ---------- */
 
   /* auto-pause when tab loses focus mid-flight */
   document.addEventListener('visibilitychange', () => {
